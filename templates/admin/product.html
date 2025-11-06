@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <title>Admin Login</title>
+{% endblock %}
+{% block body %}
+    <table>
+        <tr>
+            <th>تصویر</th>
+            <th>اسم</th>
+            <th>توضیحات</th>
+            <th>قیمت</th>
+            <th>فغال</th>
+            <th>ویرایش</th>
+        </tr>
+    </table>
+
+    {% for p in product %}
+        <tr>
+
+            <td><img src="/static/cover/{{ p.id }}.jpg"></td>
+
+            <td>{{ p.name }}</td>
+            <td>{{ p.description }}</td>
+            <td>{{ p.price }}</td>
+            <td>{{ p.active }}</td>
+            <td><a href="/admin/dashboard/product/edit-product/{{ p.id }}">ویرایش</a></td>
+            <br>
+
+        </tr>
+    {% endfor %}
+
+    <form action="#" method="post" enctype="multipart/form-data">
+        <input type="text" name="name" placeholder="نام محصول"><br>
+        <label>cover: </label><input type="file" name="cover"><br>
+        <textarea name="description" placeholder="توضیحات"></textarea><br>
+        <input type="number" name="price" placeholder="قیمت"><br>
+        <label>فعال: </label><input type="checkbox" name="active"><br>
+
+        <input type="submit"><br>
+
+    </form>
+
+{% endblock %}

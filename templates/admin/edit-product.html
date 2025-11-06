@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <title>Admin Login</title>
+{% endblock %}
+{% block body %}
+
+    <img src="/static/cover/{{ product.id }}.jpg">
+    <form action="#" method="post" enctype="multipart/form-data">
+        <input type="text" name="name" value="{{ product.name }}" placeholder="نام محصول">
+        <label>cover</label><input type="file" name="cover">
+        <textarea name="description"  placeholder="توضیحات" >{{ product.description}}</textarea>
+        <input type="text" name="price" value="{{ product.price }}" placeholder="نام محصول">
+        <label>فعال: </label><input  type="checkbox"  value=1  name="active" {{ "checked" if product.active ==1 }}>
+        <input type="submit">
+    </form>
+
+{% endblock %}
