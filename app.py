@@ -5,14 +5,19 @@ import config
 import utils
 from models.user import User
 from flask_login import LoginManager
-
+import socket
 app = Flask(__name__)
+
+
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+app.config["SECRET_KEY"] = config.APP_SECRET_KEY
+
+
+
 app.register_blueprint(blueprint_app)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = config.SQLALCHEMY_DATABASE_URI
 utils.db.init_app(app)
 
-
-
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0")
+    app.run(debug=True, host='0.0.0.0')

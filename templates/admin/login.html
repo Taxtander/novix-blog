@@ -1,14 +1,20 @@
 {% extends 'base.html' %}
-
+<html></html>
 {% block header %}
     <title>Admin Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-login.css') }}">
+
 {% endblock %}
+
 {% block body %}
-    <h1>Login Admin</h1>
-    <form action="#" method="post">
+
+
+    <form action="#" method="Post">
+        <h1>Login Admin</h1>
         <input type="text" name="username" placeholder="Username">
         <input type="password" name="password" placeholder="Password">
         <input type="submit" value="Login">
     </form>
-{% endblock %}
 
+    <script src="{{ url_for('static', filename='js/admin-login.js') }}"></script>
+{% endblock %}

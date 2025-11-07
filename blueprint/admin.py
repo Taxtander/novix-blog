@@ -14,7 +14,17 @@ def before_request():
 
 
 @app.route("/admin/login", methods=["GET", "POST"])
-def admin_page():
+def admin_login_page():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        if username == config.ADMIN_USERNAME and password == config.ADMIN_PASSWORD:
+            session["admin_username"] = username
+            return redirect(url_for("main_blueprint.admin.admin_dashboard_page"))
+
+        else:
+            return redirect(url_for("main_blueprint.admin.admin_login_page"))
+
 
 
     return render_template("admin/login.html")
