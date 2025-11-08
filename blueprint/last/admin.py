@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, session, redirect, abort,
 from time import time
 
 import config
-from models.product import Product
+from models.post import Product
 from utils import db
 
 app = Blueprint("admin", __name__)

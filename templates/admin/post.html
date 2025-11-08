@@ -1,44 +1,33 @@
 {% extends 'base.html' %}
 
 {% block header %}
-    <title>Admin Login</title>
+    <title>Create Blog Post</title>
 {% endblock %}
 {% block body %}
-    <table>
-        <tr>
-            <th>تصویر</th>
-            <th>اسم</th>
-            <th>توضیحات</th>
-            <th>قیمت</th>
-            <th>فغال</th>
-            <th>ویرایش</th>
-        </tr>
-    </table>
-
-    {% for p in product %}
-        <tr>
-
-            <td><img src="/static/cover/{{ p.id }}.jpg"></td>
-
-            <td>{{ p.name }}</td>
-            <td>{{ p.description }}</td>
-            <td>{{ p.price }}</td>
-            <td>{{ p.active }}</td>
-            <td><a href="/admin/dashboard/product/edit-product/{{ p.id }}">ویرایش</a></td>
-            <br>
-
-        </tr>
-    {% endfor %}
-
-    <form action="#" method="post" enctype="multipart/form-data">
-        <input type="text" name="name" placeholder="نام محصول"><br>
-        <label>cover: </label><input type="file" name="cover"><br>
-        <textarea name="description" placeholder="توضیحات"></textarea><br>
-        <input type="number" name="price" placeholder="قیمت"><br>
-        <label>فعال: </label><input type="checkbox" name="active"><br>
-
-        <input type="submit"><br>
-
+    <h1>Create New Blog Post</h1>
+    
+    <form action="{{ url_for('main_blueprint.admin.create_post') }}" method="post">
+        <div>
+            <label for="title">Post Title:</label><br>
+            <input type="text" id="title" name="title" placeholder="Enter blog post title" required><br>
+        </div>
+        
+        <div>
+            <label for="content">Post Content:</label><br>
+            <textarea id="content" name="content" placeholder="Write your blog post content here..." required></textarea><br>
+        </div>
+        
+        <div>
+            <input type="submit" value="Create Post">
+            <a href="{{ url_for('main_blueprint.admin.admin_dashboard_page') }}">Cancel</a>
+        </div>
     </form>
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
 {% endblock %}
