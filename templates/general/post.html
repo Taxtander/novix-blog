@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
 
 {% block header %}
-    <title>{{product.name}}</title>
+    <title>{{ post.title }}</title>
 {% endblock %}
 {% block body %}
-    {{ product.id }}<br>
-    {{ product.name }}<br>
-    {{ product.price }}<br>
-
+    <h1>{{ post.title }}</h1>
+    <p><em>Published on: {{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</em></p>
+    <div>{{ post.content|safe }}</div>
+    <br>
+    <a href="/">← Back to Blog</a>
 {% endblock %}
 

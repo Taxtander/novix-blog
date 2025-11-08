@@ -2,32 +2,43 @@
 
 {% block header %}
     <title>Create Blog Post</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-post.css') }}">
 {% endblock %}
 {% block body %}
-    <h1>Create New Blog Post</h1>
+    <div class="container">
+        <h1>Create New Blog Post</h1>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-messages flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form id="postForm" action="{{ url_for('main_blueprint.admin.create_post') }}" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="title">Post Title:</label>
+                <input type="text" id="title" name="title" placeholder="Enter blog post title" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="content">Post HTML Content:</label>
+                <input type="file" id="content" name="content" accept=".html,.htm" required>
+                <button type="button" id="previewButton" class="btn btn-secondary" style="margin-top: 10px;">Preview HTML</button>
+            </div>
+            
+            <div class="btn-container">
+                <input type="submit" value="Create Post" class="btn btn-primary">
+                <a href="{{ url_for('main_blueprint.admin.admin_dashboard_page') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+        
+        <div id="htmlPreview" class="html-preview-container" style="display:none;">
+            <h3>HTML Preview:</h3>
+            <div id="previewContent" class="html-content"></div>
+        </div>
+    </div>
     
-    <form action="{{ url_for('main_blueprint.admin.create_post') }}" method="post">
-        <div>
-            <label for="title">Post Title:</label><br>
-            <input type="text" id="title" name="title" placeholder="Enter blog post title" required><br>
-        </div>
-        
-        <div>
-            <label for="content">Post Content:</label><br>
-            <textarea id="content" name="content" placeholder="Write your blog post content here..." required></textarea><br>
-        </div>
-        
-        <div>
-            <input type="submit" value="Create Post">
-            <a href="{{ url_for('main_blueprint.admin.admin_dashboard_page') }}">Cancel</a>
-        </div>
-    </form>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+    <script src="{{ url_for('static', filename='js/admin-post.js') }}"></script>
 {% endblock %}
