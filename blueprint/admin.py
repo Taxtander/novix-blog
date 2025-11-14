@@ -1,8 +1,11 @@
-from flask import Blueprint, render_template, request, session, redirect, url_for, flash
+from flask import Blueprint, render_template, request, session, redirect, url_for, flash,current_app
+
 import config
 from models.post import Post
 from utils import db
+import os
 import uuid
+import time
 
 app = Blueprint("admin", __name__)
 
@@ -41,36 +44,6 @@ def admin_posts_page():
     return render_template("/admin/posts.html", posts=posts)
 
 
-import uuid
-
-@app.route("/admin/dashboard/post", methods=["GET", "POST"])
-def admin_create_post_page():
-    # This route now handles the blog post creation form
-    html_content = None
-    
-    if request.method == "POST":
-        title = request.form.get("title")
-        
-        # Handle HTML file upload
-        html_file = request.files.get('content')
-        if html_file and html_file.filename != '':
-            # Read the HTML file content
-            html_content = html_file.read().decode('utf-8')
-        else:
-            # If no file uploaded, get from text input (fallback)
-            html_content = request.form.get("content", "")
-        
-        if title and html_content:
-            new_post = Post(title=title, content=html_content)
-            db.session.add(new_post)
-            db.session.commit()
-            flash('Post created successfully!', 'success')
-            return redirect(url_for('main_blueprint.admin.admin_dashboard_page'))
-        else:
-            flash('Please fill in all fields', 'error')
-    
-    return render_template("/admin/post.html", html_content=html_content if html_content else "")
-
 
 @app.route("/admin/dashboard/post/postpreview/<temp_id>")
 def post_preview_page(temp_id):
@@ -96,22 +69,39 @@ def generate_preview():
 def create_post():
     if request.method == "POST":
         title = request.form.get("title")
-        content = request.form.get("content")
-        
-        if title and content:
-            new_post = Post(title=title, content=content)
+        keywords = request.form.get("keywords")
+        html_content = ""
+
+        html_file = request.files.get("content")
+        if html_file and html_file.filename != "":
+            html_content = html_file.read().decode("utf-8")
+
+        html_folder = os.path.join(current_app.root_path, "static", "HTML-POSTS")
+        if not os.path.exists(html_folder):
+            os.makedirs(html_folder)
+
+        filename = f"{title}-{str(uuid.uuid4())[:8]}.html".replace(" ", "-")
+        relative_path = os.path.join("HTML-POSTS", filename)
+        full_path = os.path.join(html_folder, filename)
+
+        with open(full_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+
+        if title and keywords and html_content:
+            new_post = Post(title=title, content_name=relative_path, keywords=keywords)
             db.session.add(new_post)
             db.session.commit()
             flash('Post created successfully!', 'success')
             return redirect(url_for('main_blueprint.admin.admin_dashboard_page'))
         else:
             flash('Please fill in all fields', 'error')
-    
+
     return render_template("/admin/create-post.html")
 
 
 @app.route("/admin/dashboard/edit-post/<int:id>", methods=["GET", "POST"])
 def edit_post(id):
+
     post = Post.query.get_or_404(id)
     
     if request.method == "POST":

@@ -1,0 +1,7 @@
+{
+  "timestamp": "2025-11-14_11-56-03",
+  "file_path": "test_file.py",
+  "old_content": "def old_func(): pass",
+  "new_content": "def new_func(): return 'updated'",
+  "change_description": "Test code change"
+}

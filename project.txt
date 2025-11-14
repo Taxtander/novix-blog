@@ -1,0 +1,112 @@
+# NOVIX-BLOG Project Structure Analysis
+
+## Project Overview
+A Flask-based blog application with admin panel for managing blog posts and users.
+
+## Directory Structure
+```
+G:\Projects\web\novix-blog\
+├───.gitignore
+├───app.py                 # Main Flask application entry point
+├───config.py              # Configuration settings
+├───requirements.txt       # Python dependencies
+├───utils.py               # Utility functions and database instance
+├───blueprint\             # Flask Blueprints for modular routing
+│   ├───.__init__.py
+│   ├───admin.py           # Admin panel routes and functionality
+│   ├───blueprint.py       # Main blueprint aggregator
+│   ├───general.py         # Public-facing routes (main page, posts, about)
+│   ├───user.py            # User-related routes
+│   └───last\              # Duplicate or additional blueprint directory
+├───models\                # Database models
+│   ├───post.py            # Blog post model
+│   └───user.py            # User model
+├───static\                # Static assets (CSS, JS, images) - currently empty
+├───templates\             # Jinja2 HTML templates
+│   ├───admin\             # Admin panel templates
+│   ├───general\           # Public-facing templates
+│   ├───user\              # User-related templates
+│   └───base.html          # Base HTML template
+└───instance\              # Flask instance folder (database files, etc.)
+```
+
+## Main Files & Their Functions
+
+### 1. Core Application Files
+- **app.py**: Main Flask application entry point
+  - Initializes Flask app with configuration
+  - Sets up database connection
+  - Registers blueprints
+  - Runs the application server
+
+- **config.py**: Configuration file containing:
+  - Database URI (SQLite)
+  - Secret key for sessions
+  - Admin credentials
+
+- **utils.py**: Contains shared utilities
+  - Database instance (SQLAlchemy)
+
+- **requirements.txt**: Dependencies list
+  - Flask
+  - Flask-SQLAlchemy
+  - Flask-Login
+
+### 2. Model Files (models/)
+- **post.py**: Blog post model with id, title, content, and creation timestamp
+- **user.py**: User model with id, username, password, and phone fields
+
+### 3. Blueprint Files (blueprint/)
+- **blueprint.py**: Aggregates all blueprints (general, admin, user)
+- **general.py**: Public-facing routes
+  - `/` - Main blog page showing all posts
+  - `/post/<id>/<title>` - Individual post page
+  - `/about` - About page
+- **admin.py**: Admin panel routes
+  - `/admin/login` - Admin authentication
+  - `/admin/dashboard` - Admin dashboard
+  - `/admin/dashboard/posts` - All blog posts view
+  - `/admin/dashboard/post` - Create new blog post
+  - `/admin/dashboard/create-post` - Alternative post creation
+  - `/admin/dashboard/edit-post/<id>` - Edit existing post
+  - `/admin/dashboard/delete-post/<id>` - Delete post
+- **user.py**: User-related routes
+  - `/user/login` - User login page
+
+### 4. Template Files (templates/)
+Public templates:
+- **base.html**: Base template structure
+- **general/main.html**: Main blog page
+- **general/post.html**: Individual post view
+- **general/about.html**: About page
+
+Admin templates:
+- **admin/login.html**: Admin login page
+- **admin/dashboard.html**: Admin dashboard
+- **admin/post.html**: Create/edit post form
+- **admin/post-preview.html**: Post preview page
+- **admin/edit-post.html**: Edit existing post form
+
+User templates:
+- **user/login.html**: User login page
+- **user/dashboard.html**: User dashboard
+- **user/product.html**: Product page
+- **user/edit-product.html**: Product editing page
+
+## Key Features
+1. **Blog Management**: Create, read, update, and delete blog posts
+2. **Admin Panel**: Protected area for managing content
+3. **User Authentication**: Admin login system
+4. **Post Display**: Public-facing blog with individual post views
+5. **Database Integration**: SQLite database with SQLAlchemy ORM
+
+## Security Considerations
+- Admin credentials are hardcoded in config.py (should be moved to environment variables)
+- Session-based authentication for admin panel
+- No input validation shown in file uploads (potential security concern)
+
+## Technology Stack
+- Backend: Python Flask
+- Database: SQLite with SQLAlchemy
+- Templates: Jinja2
+- Frontend: HTML (with potential for CSS/JS in static folder)

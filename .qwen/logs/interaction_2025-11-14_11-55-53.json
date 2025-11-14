@@ -1,0 +1,9 @@
+{
+  "timestamp": "2025-11-14_11-55-53",
+  "interaction_type": "test",
+  "content": "This is a test interaction",
+  "metadata": {
+    "test": true,
+    "purpose": "verification"
+  }
+}

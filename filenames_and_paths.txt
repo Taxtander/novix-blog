@@ -1,0 +1,610 @@
+app.py
+G:\Projects\web\novix-blog\app.py
+from flask import Flask
+from blueprint.blueprint import app as blueprint_app
+from flask_sqlalchemy import SQLAlchemy
+import config
+import utils
+from models.user import User
+from flask_login import LoginManager
+import socket
+app = Flask(__name__)
+
+
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+app.config["SECRET_KEY"] = config.APP_SECRET_KEY
+app.register_blueprint(blueprint_app)
+app.config["SQLALCHEMY_DATABASE_URI"] = config.SQLALCHEMY_DATABASE_URI
+
+utils.db.init_app(app)
+
+with app.app_context():
+    utils.db.create_all()
+
+
+
+
+if __name__ == "__main__":
+    app.run(debug=True, host='0.0.0.0')
+
+
+config.py
+G:\Projects\web\novix-blog\config.py
+
+
+
+SQLALCHEMY_DATABASE_URI = "sqlite:///data.db"
+APP_SECRET_KEY = "sadfadsfsadfadsfadfdsaf4s4fa454dsfsadfsadfsadf"
+
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "1234"
+
+
+utils.py
+G:\Projects\web\novix-blog\utils.py
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
+
+
+requirements.txt
+G:\Projects\web\novix-blog\requirements.txt
+flask_sqlalchemy
+flask_login
+flask
+
+
+blueprint/blueprint.py
+G:\Projects\web\novix-blog\blueprint\blueprint.py
+from flask import Blueprint
+from .general import app as general_bp
+from .admin import app as admin_bp
+from .user import app as user_bp
+
+app = Blueprint("main_blueprint", __name__)
+
+app.register_blueprint(general_bp)
+app.register_blueprint(admin_bp)
+app.register_blueprint(user_bp)
+
+
+blueprint/general.py
+G:\Projects\web\novix-blog\blueprint\general.py
+from flask import Blueprint, render_template, request
+
+from models.post import Post
+
+app = Blueprint("general", __name__)
+
+
+@app.route("/")
+def main_page():
+    posts = Post.query.all()
+    return render_template("general/main.html", posts=posts)
+
+@app.route("/post/<int:id>/<title>")
+def post_page(id, title):
+    post = Post.query.get_or_404(id)
+    return render_template("general/post.html", post=post)
+
+@app.route("/about")
+def about_page():
+    return render_template("general/about.html")
+
+
+blueprint/admin.py
+G:\Projects\web\novix-blog\blueprint\admin.py
+from flask import Blueprint, render_template, request, session, redirect, url_for, flash
+import config
+from models.post import Post
+from utils import db
+import uuid
+
+app = Blueprint("admin", __name__)
+
+
+@app.before_request
+def before_request():
+    if request.endpoint and request.endpoint.startswith("main_blueprint.admin."):
+        if session.get("admin_login") is None and request.endpoint != "main_blueprint.admin.admin_login_page":
+            return redirect(url_for("main_blueprint.admin.admin_login_page"))
+
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login_page():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        if username == config.ADMIN_USERNAME and password == config.ADMIN_PASSWORD:
+            session["admin_login"] = username
+            return redirect(url_for("main_blueprint.admin.admin_dashboard_page"))
+        else:
+            flash('Invalid credentials', 'error')
+            return redirect(url_for("main_blueprint.admin.admin_login_page"))
+
+    return render_template("admin/login.html")
+
+
+@app.route("/admin/dashboard", methods=["GET"])
+def admin_dashboard_page():
+    posts = Post.query.all()
+    return render_template("/admin/dashboard.html", posts=posts)
+
+
+@app.route("/admin/dashboard/posts", methods=["GET"])
+def admin_posts_page():
+    posts = Post.query.order_by(Post.created_at.desc()).all()
+    return render_template("/admin/posts.html", posts=posts)
+
+
+import uuid
+
+@app.route("/admin/dashboard/post", methods=["GET", "POST"])
+def admin_create_post_page():
+    # This route now handles the blog post creation form
+    html_content = None
+
+    if request.method == "POST":
+        title = request.form.get("title")
+
+        # Handle HTML file upload
+        html_file = request.files.get('content')
+        if html_file and html_file.filename != '':
+            # Read the HTML file content
+            html_content = html_file.read().decode('utf-8')
+        else:
+            # If no file uploaded, get from text input (fallback)
+            html_content = request.form.get("content", "")
+
+        if title and html_content:
+            new_post = Post(title=title, content=html_content)
+            db.session.add(new_post)
+            db.session.commit()
+            flash('Post created successfully!', 'success')
+            return redirect(url_for('main_blueprint.admin.admin_dashboard_page'))
+        else:
+            flash('Please fill in all fields', 'error')
+
+    return render_template("/admin/post.html", html_content=html_content if html_content else "")
+
+
+@app.route("/admin/dashboard/post/postpreview/<temp_id>")
+def post_preview_page(temp_id):
+    # Retrieve temporary content from session or cache
+    temp_content = session.get(f"preview_content_{temp_id}", "")
+    return render_template("/admin/post-preview.html", content=temp_content)
+
+
+@app.route("/admin/dashboard/generate-preview", methods=["POST"])
+def generate_preview():
+    # Handle HTML file upload for preview
+    html_file = request.files.get('content')
+    if html_file and html_file.filename != '':
+        html_content = html_file.read().decode('utf-8')
+        temp_id = str(uuid.uuid4())
+        session[f"preview_content_{temp_id}"] = html_content
+        return {"success": True, "preview_url": url_for('main_blueprint.admin.post_preview_page', temp_id=temp_id)}
+
+    return {"success": False, "error": "No file provided"}
+
+
+@app.route("/admin/dashboard/create-post", methods=["GET", "POST"])
+def create_post():
+    if request.method == "POST":
+        title = request.form.get("title")
+        content = request.form.get("content")
+
+        if title and content:
+            new_post = Post(title=title, content=content)
+            db.session.add(new_post)
+            db.session.commit()
+            flash('Post created successfully!', 'success')
+            return redirect(url_for('main_blueprint.admin.admin_dashboard_page'))
+        else:
+            flash('Please fill in all fields', 'error')
+
+    return render_template("/admin/create-post.html")
+
+
+@app.route("/admin/dashboard/edit-post/<int:id>", methods=["GET", "POST"])
+def edit_post(id):
+    post = Post.query.get_or_404(id)
+
+    if request.method == "POST":
+        title = request.form.get("title")
+        content = request.form.get("content")
+
+        if title and content:
+            post.title = title
+            post.content = content
+            db.session.commit()
+            flash('Post updated successfully!', 'success')
+            return redirect(url_for('main_blueprint.admin.admin_dashboard_page'))
+        else:
+            flash('Please fill in all fields', 'error')
+
+    return render_template("/admin/edit-post.html", post=post)
+
+
+@app.route("/admin/dashboard/delete-post/<int:id>", methods=["POST"])
+def delete_post(id):
+    post = Post.query.get_or_404(id)
+    db.session.delete(post)
+    db.session.commit()
+    flash('Post deleted successfully!', 'success')
+    return redirect(url_for('main_blueprint.admin.admin_dashboard_page'))
+
+
+@app.route("/admin/dashboard/product/edit-product/<id>", methods=["GET", "POST"])
+def admin_edit_product_page(id):
+    # TODO: Implement product editing functionality
+    pass
+
+
+blueprint/user.py
+G:\Projects\web\novix-blog\blueprint\user.py
+from flask import Blueprint, render_template
+import models.user
+
+
+app = Blueprint("user", __name__)
+
+
+@app.route("/user/login")
+def user_page():
+    return render_template("user/login.html")
+
+
+models/user.py
+G:\Projects\web\novix-blog\models\user.py
+from utils import db
+
+class User(db.Model):
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String, unique=True, nullable=False,index=True)
+    password = db.Column(db.String, unique=True, nullable=False,index=True)
+    phone = db.Column(db.String, unique=True, nullable=False,index=True)
+
+
+models/post.py
+G:\Projects\web\novix-blog\models\post.py
+from utils import db
+
+class Post(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+    def __repr__(self):
+        return f'<Post {self.title}>'
+
+
+blueprint/last/general.py
+G:\Projects\web\novix-blog\blueprint\last\general.py
+from flask import Blueprint, render_template, request
+
+from models.post import Product
+
+app = Blueprint("general", __name__)
+
+
+@app.route("/")
+def main_page():
+    print(request.endpoint)
+    products = Product.query.all()
+    return render_template("general/main.html",products=products)
+
+@app.route("/product/<int:id>/<name>")
+def product_page(id,name):
+    product = Product.query.filter(Product.id == id).filter(Product.name == name).filter(Product.active == 1).first_or_404()
+    return render_template("general/post.html", product=product)
+@app.route("/about")
+def about_page():
+    return render_template("general/about.html")
+
+
+blueprint/last/admin.py
+G:\Projects\web\novix-blog\blueprint\last\admin.py
+from flask import Blueprint, render_template, request, session, redirect, abort, url_for
+from time import time
+
+import config
+from models.post import Product
+from utils import db
+
+app = Blueprint("admin", __name__)
+
+
+@app.before_request
+def before_request():
+    pass
+
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login_page():
+    return render_template("admin/login.html",time=time)
+
+
+@app.route("/admin/dashboard", methods=["GET"])
+def admin_dashboard_page():
+    pass
+
+
+@app.route("/admin/dashboard/product", methods=["GET", "POST"])
+def admin_product_page():
+    pass
+
+
+@app.route("/admin/dashboard/product/edit-product/<id>", methods=["GET", "POST"])
+def admin_edit_product_page(id):
+    pass
+
+
+blueprint/last/blueprint.py
+G:\Projects\web\novix-blog\blueprint\last\blueprint.py
+from flask import Blueprint
+from .general import app as general_bp
+from .admin import app as admin_bp
+from .user import app as user_bp
+
+app = Blueprint("main_blueprint", __name__)
+
+app.register_blueprint(general_bp)
+app.register_blueprint(admin_bp)
+app.register_blueprint(user_bp)
+
+
+blueprint/last/user.py
+G:\Projects\web\novix-blog\blueprint\last\user.py
+from flask import Blueprint, render_template
+import models.user
+
+
+app = Blueprint("user", __name__)
+
+
+@app.route("/user/login")
+def user_page():
+    return render_template("user/login.html")
+
+
+templates/base.html
+G:\Projects\web\novix-blog\templates\base.html
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    {% block header %}{% endblock %}
+</head>
+<body>
+{% block body %}{% endblock %}
+</body>
+</html>
+
+
+templates/general/main.html
+G:\Projects\web\novix-blog\templates\general\main.html
+{% extends 'base.html' %}
+
+{% block header %}
+    <title>My Blog</title>
+{% endblock %}
+{% block body %}
+    <h1>Welcome to My Blog</h1>
+
+    {% if posts %}
+        {% for post in posts %}
+            <div style="margin-bottom: 30px; padding: 15px; border-bottom: 1px solid #eee;">
+                <h2><a href="{{ url_for('main_blueprint.general.post_page', id=post.id, title=post.title|replace(' ', '-')) }}">{{ post.title }}</a></h2>
+                <p><em>Published on: {{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</em></p>
+                <p>{{ post.content[:200] }}{% if post.content|length > 200 %}...{% endif %}</p>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No blog posts yet. Check back later!</p>
+    {% endif %}
+
+    <a href="/admin/login">Admin Login</a>
+{% endblock %
+
+
+templates/admin/login.html
+G:\Projects\web\novix-blog\templates\admin\login.html
+{% extends 'base.html' %}
+<html></html>
+{% block header %}
+    <title>Admin Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-login.css') }}">
+
+{% endblock %}
+
+{% block body %}
+
+
+    <form action="#" method="Post">
+        <h1>Login Admin</h1>
+        <input type="text" name="username" placeholder="Username">
+        <input type="password" name="password" placeholder="Password">
+        <input type="submit" value="Login">
+    </form>
+
+    <script src="{{ url_for('static', filename='js/admin-login.js') }}"></script>
+{% endblock %
+
+
+templates/admin/dashboard.html
+G:\Projects\web\novix-blog\templates\admin\dashboard.html
+{% extends 'base.html' %}
+
+{% block header %}
+    <title>Admin Login</title>
+{% endblock %}
+{% block body %}
+    <a href="/admin/dashboard/post">post</a>
+{% endblock %
+
+
+templates/admin/post.html
+G:\Projects\web\novix-blog\templates\admin\post.html
+{% extends 'base.html' %}
+
+{% block header %}
+    <title>Create Blog Post</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-post.css') }}">
+{% endblock %}
+{% block body %}
+    <div class="container">
+        <h1>Create New Blog Post</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-messages flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form id="postForm" action="{{ url_for('main_blueprint.admin.create_post') }}" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="title">Post Title:</label>
+                <input type="text" id="title" name="title" placeholder="Enter blog post title" required>
+            </div>
+
+            <div class="form-group">
+                <label for="content">Post HTML Content:</label>
+                <input type="file" id="content" name="content" accept=".html,.htm" required>
+                <button type="button" id="previewButton" class="btn btn-secondary" style="margin-top: 10px;">Preview HTML</button>
+            </div>
+
+            <div class="btn-container">
+                <input type="submit" value="Create Post" class="btn btn-primary">
+                <a href="{{ url_for('main_blueprint.admin.admin_dashboard_page') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+
+        <div id="htmlPreview" class="html-preview-container" style="display:none;">
+            <h3>HTML Preview:</h3>
+            <div id="previewContent" class="html-content"></div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/admin-post.js') }}"></script>
+{% endblock %
+
+
+project.txt
+G:\Projects\web\novix-blog\project.txt
+# NOVIX-BLOG Project Structure Analysis
+
+## Project Overview
+A Flask-based blog application with admin panel for managing blog posts and users.
+
+## Directory Structure
+```
+G:\Projects\web\novix-blog\
+├───.gitignore
+├───app.py                 # Main Flask application entry point
+├───config.py              # Configuration settings
+├───requirements.txt       # Python dependencies
+├───utils.py               # Utility functions and database instance
+├───blueprint\             # Flask Blueprints for modular routing
+│   ├───.__init__.py
+│   ├───admin.py           # Admin panel routes and functionality
+│   ├───blueprint.py       # Main blueprint aggregator
+│   ├───general.py         # Public-facing routes (main page, posts, about)
+│   ├───user.py            # User-related routes
+│   └───last\              # Duplicate or additional blueprint directory
+├───models\                # Database models
+│   ├───post.py            # Blog post model
+│   └───user.py            # User model
+├───static\                # Static assets (CSS, JS, images) - currently empty
+├───templates\             # Jinja2 HTML templates
+│   ├───admin\             # Admin panel templates
+│   ├───general\           # Public-facing templates
+│   ├───user\              # User-related templates
+│   └───base.html          # Base HTML template
+└───instance\              # Flask instance folder (database files, etc.)
+```
+
+## Main Files & Their Functions
+
+### 1. Core Application Files
+- **app.py**: Main Flask application entry point
+  - Initializes Flask app with configuration
+  - Sets up database connection
+  - Registers blueprints
+  - Runs the application server
+
+- **config.py**: Configuration file containing:
+  - Database URI (SQLite)
+  - Secret key for sessions
+  - Admin credentials
+
+- **utils.py**: Contains shared utilities
+  - Database instance (SQLAlchemy)
+
+- **requirements.txt**: Dependencies list
+  - Flask
+  - Flask-SQLAlchemy
+  - Flask-Login
+
+### 2. Model Files (models/)
+- **post.py**: Blog post model with id, title, content, and creation timestamp
+- **user.py**: User model with id, username, password, and phone fields
+
+### 3. Blueprint Files (blueprint/)
+- **blueprint.py**: Aggregates all blueprints (general, admin, user)
+- **general.py**: Public-facing routes
+  - `/` - Main blog page showing all posts
+  - `/post/<id>/<title>` - Individual post page
+  - `/about` - About page
+- **admin.py**: Admin panel routes
+  - `/admin/login` - Admin authentication
+  - `/admin/dashboard` - Admin dashboard
+  - `/admin/dashboard/posts` - All blog posts view
+  - `/admin/dashboard/post` - Create new blog post
+  - `/admin/dashboard/create-post` - Alternative post creation
+  - `/admin/dashboard/edit-post/<id>` - Edit existing post
+  - `/admin/dashboard/delete-post/<id>` - Delete post
+- **user.py**: User-related routes
+  - `/user/login` - User login page
+
+### 4. Template Files (templates/)
+Public templates:
+- **base.html**: Base template structure
+- **general/main.html**: Main blog page
+- **general/post.html**: Individual post view
+- **general/about.html**: About page
+
+Admin templates:
+- **admin/login.html**: Admin login page
+- **admin/dashboard.html**: Admin dashboard
+- **admin/post.html**: Create/edit post form
+- **admin/post-preview.html**: Post preview page
+- **admin/edit-post.html**: Edit existing post form
+
+User templates:
+- **user/login.html**: User login page
+- **user/dashboard.html**: User dashboard
+- **user/product.html**: Product page
+- **user/edit-product.html**: Product editing page
+
+## Key Features
+1. **Blog Management**: Create, read, update, and delete blog posts
+2. **Admin Panel**: Protected area for managing content
+3. **User Authentication**: Admin login system
+4. **Post Display**: Public-facing blog with individual post views
+5. **Database Integration**: SQLite database with SQLAlchemy ORM
+
+## Security Considerations
+- Admin credentials are hardcoded in config.py (should be moved to environment variables)
+- Session-based authentication for admin panel
+- No input validation shown in file uploads (potential security concern)
+
+## Technology Stack
+- Backend: Python Flask
+- Database: SQLite with SQLAlchemy
+- Templates: Jinja2
+- Frontend: HTML (with potential for CSS/JS in static folder)

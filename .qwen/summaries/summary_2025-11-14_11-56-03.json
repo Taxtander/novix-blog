@@ -1,0 +1,8 @@
+{
+  "timestamp": "2025-11-14_11-56-03",
+  "title": "Test Summary",
+  "summary_content": "This is a test summary to verify the logging system works correctly.",
+  "metadata": {
+    "test_result": "success"
+  }
+}
